@@ -41,10 +41,11 @@ public class Weapon : MonoBehaviour
         else return false;
     }
 
-    public void Reload()
+    public void Reload(AnimationManager _AnimationManager)
     {
         if (!IsReloading)
         {
+            _AnimationManager.SetAnimationReload();
             Debug.Log("Start Reloading");
             IsReloading = true;
             CanFire = false;
@@ -53,14 +54,15 @@ public class Weapon : MonoBehaviour
         }
     }
 
-    public void Fire()
+    public void Fire(AnimationManager _AnimationManager)
     {
         if (CanFire && !IsMagazineEmpty() && !IsReloading)
         {
             ShotSound.Play();
+            _AnimationManager.SetAnimationFire();
 
             CurrentMagazineBulletCount--;
-            Debug.Log("Осталось патронов в обойме: " + CurrentMagazineBulletCount);
+            Debug.Log("Bullets remaining: " + CurrentMagazineBulletCount);
 
             RaycastHit HitInfo = new RaycastHit();
 

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
@@ -6,18 +6,20 @@ public class PlayerController : MonoBehaviour
     public float MovementSpeed = 2.0f;
     public float SprintSpeed = 4.0f;
     public float JumpForce = 5.0f;
-    public float DistanceToGround = 0.71f;
+    public float DistanceToGround = 0.76f;
     public float MouseSensitivity = 5.0f;
     public float RotationSmoothing = 20f;
     public GameObject HandMeshes;
     public GameObject[] WeaponInventory;
     public GameObject[] WeaponMeshes;
-    private int SelectedWeaponId = 1;
+    private int SelectedWeaponId = 0;
     private Weapon _Weapon;
-    private float pitch, yaw; // ���������, �����������
+    private float pitch, yaw;
     private bool IsGrounded;
+    private bool IsSprinting = false; //булевая бежим мы сейчас или нет
     private Rigidbody _Rigidbody;
     private GameManager _GameManager;
+    private AnimationManager _AnimationManager; //приватное поле которое будет хранить в себе анимайшен менеджер
 
     void Start()
     {
@@ -25,6 +27,8 @@ public class PlayerController : MonoBehaviour
         _GameManager = FindAnyObjectByType<GameManager>();
         _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
         WeaponMeshes[SelectedWeaponId].SetActive(true);
+
+        _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
 
         LockCursor = true;
         UpdateCursorState();
@@ -43,18 +47,18 @@ public class PlayerController : MonoBehaviour
         }
         else _Rigidbody.MovePosition(CalculateMovement());
 
-        // ������������ ���������� ������� �� ������� Esc ��� ������ �������
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             LockCursor = !LockCursor;
             UpdateCursorState();
         }
 
-        if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire();
-        if (Input.GetKey(KeyCode.R)) _Weapon.Reload();
+        if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire(_AnimationManager);
+        if (Input.GetKey(KeyCode.R)) _Weapon.Reload(_AnimationManager);
         if (Input.GetAxis("Mouse ScrollWheel") < 0) SelectNextWeapon();
         else if (Input.GetAxis("Mouse ScrollWheel") > 0) SelectPrevWeapon();
 
+        SetAnimation();
         SetRotation();
     }
 
@@ -74,6 +78,8 @@ public class PlayerController : MonoBehaviour
 
     private Vector3 CalculateMovement()
     {
+        IsSprinting = false;
+
         float HorizontalDirection = Input.GetAxis("Horizontal");
         float VerticalDirection = Input.GetAxis("Vertical");
 
@@ -84,6 +90,8 @@ public class PlayerController : MonoBehaviour
 
     private Vector3 CalculateSprint()
     {
+        IsSprinting = true;
+
         float HorizontalDirection = Input.GetAxis("Horizontal");
         float VerticalDirection = Input.GetAxis("Vertical");
 
@@ -134,6 +142,8 @@ public class PlayerController : MonoBehaviour
             _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
             WeaponMeshes[SelectedWeaponId].SetActive(true);
 
+            _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
+
             Debug.Log("Weapon: " + _Weapon.WeaponType);
         }
     }
@@ -148,7 +158,33 @@ public class PlayerController : MonoBehaviour
             _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
             WeaponMeshes[SelectedWeaponId].SetActive(true);
 
+            _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
+
             Debug.Log("Weapon: " + _Weapon.WeaponType);
         }
+    }
+
+    //метод который считывает двигаемся ли в данный момент
+    private bool IsMoving()
+    {
+        //если перемещается по горизонтали или по вертикали
+        //если по какой либо из осей перемещается то возвращает тру
+        return Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
+    }
+    //метод переключения анимации
+    private void SetAnimation()
+    {
+        if (_AnimationManager == null)
+        {
+            Debug.LogError("AnimationManager is null! SelectedWeaponId: " + SelectedWeaponId);
+            return;
+        }
+
+        if (IsMoving())
+        {
+            if (IsSprinting) _AnimationManager.SetAnimationRun();
+            else _AnimationManager.SetAnimationWalk();
+        }
+        else _AnimationManager.SetAnimationIdle();
     }
 }
