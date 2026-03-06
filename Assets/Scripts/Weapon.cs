@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 public class Weapon : MonoBehaviour
@@ -7,13 +7,15 @@ public class Weapon : MonoBehaviour
     public int MaxMagazineBulletCount;
     public int CurrentMagazineBulletCount;
     public int MaxAmmoSupply;
+    public int WeaponDamage;
     public float TimeBetweenShots;
     public float TimeForReloading;
     bool CanFire = true;
     bool IsReloading = false;
     public AudioSource ShotSound;
     public AudioSource ReloadSound;
-    
+    public LayerMask AttackableLayer;
+
     private IEnumerator LockFire(float Time)
     {
         yield return new WaitForSeconds(Time);
@@ -68,7 +70,15 @@ public class Weapon : MonoBehaviour
 
             if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out HitInfo))
             {
-                Debug.Log(HitInfo.transform.name);
+                if (HitInfo.transform.gameObject.layer == 6)
+                {
+                    //тоес с того объекта которому мы нанесли урон мы забираем енему
+                    //контроллер обращаемя к нему и вызываем метод дамага
+                    EnemyController EC = HitInfo.transform.gameObject.GetComponent<EnemyController>();
+                    EC.DealDamage(WeaponDamage);
+
+                    Debug.Log("Вы попали по " + HitInfo.transform.name + " и нанесли ему " + WeaponDamage);
+                }
             }
             CanFire = false;
             StartCoroutine(LockFire(TimeBetweenShots));

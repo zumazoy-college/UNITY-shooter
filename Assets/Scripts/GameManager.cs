@@ -1,13 +1,19 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    private int Health;
+    public int Health;
     public int MaxHealth = 100;
     private int Stamina = 100;
     public bool IsStaminaRestoring = false;
+    public GameObject Player;
+    public static GameManager ManagerInstance;
 
+    private void Awake()
+    {
+        ManagerInstance = this;
+    }
 
     void Start()
     {
@@ -21,7 +27,6 @@ public class GameManager : MonoBehaviour
 
     private void StaminaCheck()
     {
-        //Debug.Log("�������: " + Stamina);
         if (Stamina <= 0) StartCoroutine(StaminaRestore());
     }
 
@@ -48,5 +53,18 @@ public class GameManager : MonoBehaviour
         else Health += HealthPointCount;
 
         Debug.Log("HP: " + Health);
+    }
+
+    public void DamagePlayer(int Count)
+    {
+        //если колво жизнеё больше нуля
+        if (Health > 0)
+        {
+            //то мы от жизней отнимаем количество параметр каунт и в лог урон выводим
+            Health -= Count;
+            Debug.Log("Вам нанесли урон" + Count);
+
+        } //елс нелф меньше либо равно нулю то смерть в консоль просто пока
+        else if (Health <= 0) Debug.Log("СМЕРТЬ");
     }
 }
