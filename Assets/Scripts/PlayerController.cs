@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using InfimaGames.LowPolyShooterPack;
+using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
@@ -30,6 +31,7 @@ public class PlayerController : MonoBehaviour
 
         _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
 
+        _Weapon.UpdateUI();
         LockCursor = true;
         UpdateCursorState();
     }
@@ -53,8 +55,9 @@ public class PlayerController : MonoBehaviour
             UpdateCursorState();
         }
 
-        if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire(_AnimationManager);
-        if (Input.GetKey(KeyCode.R)) _Weapon.Reload(_AnimationManager);
+        _Weapon.SetAnimationManager(_AnimationManager);
+        if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire();
+        if (Input.GetKey(KeyCode.R)) _Weapon.Reload();
         if (Input.GetAxis("Mouse ScrollWheel") < 0) SelectNextWeapon();
         else if (Input.GetAxis("Mouse ScrollWheel") > 0) SelectPrevWeapon();
 
@@ -144,6 +147,8 @@ public class PlayerController : MonoBehaviour
 
             _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
 
+            _Weapon.UpdateUI();
+
             Debug.Log("Weapon: " + _Weapon.WeaponType);
         }
     }
@@ -159,6 +164,8 @@ public class PlayerController : MonoBehaviour
             WeaponMeshes[SelectedWeaponId].SetActive(true);
 
             _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
+
+            _Weapon.UpdateUI();
 
             Debug.Log("Weapon: " + _Weapon.WeaponType);
         }

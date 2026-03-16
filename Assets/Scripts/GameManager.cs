@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -9,6 +11,9 @@ public class GameManager : MonoBehaviour
     public bool IsStaminaRestoring = false;
     public GameObject Player;
     public static GameManager ManagerInstance;
+    public Slider HealthBar;
+    public Slider StaminaBar;
+    public Image GameOverScreen;
 
     private void Awake()
     {
@@ -18,6 +23,8 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         Health = 50;
+        HealthBar.value = Health;
+        StaminaBar.value = Stamina;
     }
 
     void FixedUpdate()
@@ -38,13 +45,15 @@ public class GameManager : MonoBehaviour
 
         Stamina = 100;
 
+        StaminaBar.value = Stamina;
+
         IsStaminaRestoring = false;
     }
 
     public void SpendStamina()
     {
         Stamina -= 1;
-
+        StaminaBar.value = Stamina;
     }
 
     public void Healing(int HealthPointCount)
@@ -52,6 +61,7 @@ public class GameManager : MonoBehaviour
         if (Health + HealthPointCount >= MaxHealth) Health = MaxHealth;
         else Health += HealthPointCount;
 
+        HealthBar.value = Health;
         Debug.Log("HP: " + Health);
     }
 
@@ -62,9 +72,19 @@ public class GameManager : MonoBehaviour
         {
             //то мы от жизней отнимаем количество параметр каунт и в лог урон выводим
             Health -= Count;
+            HealthBar.value = Health;
             Debug.Log("Вам нанесли урон" + Count);
-
         } //елс нелф меньше либо равно нулю то смерть в консоль просто пока
-        else if (Health <= 0) Debug.Log("СМЕРТЬ");
+        else if (Health <= 0) GameOver();
+    }
+
+    public void GameOver()
+    {
+        GameOverScreen.gameObject.SetActive(true);
+    }
+
+    public void RestartGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

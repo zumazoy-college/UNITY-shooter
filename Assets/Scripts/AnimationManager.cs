@@ -2,12 +2,10 @@
 
 public class AnimationManager : MonoBehaviour
 {
-    //аниматор прост создаем
     private Animator _Animator;
 
     private void Start()
     {
-        //ссылку присваиваем геткампонент
         _Animator = GetComponent<Animator>();
     }
 
@@ -18,9 +16,6 @@ public class AnimationManager : MonoBehaviour
             Debug.LogWarning("Animator is null, cannot set animation");
             return;
         }
-        //обращаемся к аниматору, устанавливаем целочисленное значение,
-        //указываем к какому параметру я хочу прикрутить.
-        //соблюдаем регист аниматора и 0 
         _Animator.SetInteger("Animation", 0);
     }
 
@@ -34,14 +29,38 @@ public class AnimationManager : MonoBehaviour
         _Animator.SetInteger("Animation", 2);
     }
 
-    public void SetAnimationFire()
+    public void SetAnimationFire(float desiredDuration = 0f)
     {
+        if (desiredDuration > 0f)
+        {
+            float clipLength = GetClipLength("fire");
+            if (clipLength > 0f)
+                _Animator.speed = clipLength / desiredDuration;
+        }
         _Animator.SetTrigger("Fire");
+    }
+
+    public void ResetAnimatorSpeed()
+    {
+        if (_Animator != null)
+            _Animator.speed = 1f;
+    }
+
+    public float GetClipLength(string clipName)
+    {
+        if (_Animator == null || _Animator.runtimeAnimatorController == null)
+            return 0f;
+
+        foreach (var clip in _Animator.runtimeAnimatorController.animationClips)
+        {
+            if (clip.name.StartsWith(clipName))
+                return clip.length;
+        }
+        return 0f;
     }
 
     public void SetAnimationReload()
     {
         _Animator.SetTrigger("Reload");
     }
-
 }

@@ -1,9 +1,11 @@
-﻿using System.Collections;
+﻿using UnityEngine.UI;
+using System.Collections;
 using UnityEngine;
 
 public class Weapon : MonoBehaviour
 {
     public WeaponsEnum WeaponType;
+    public Text AmmoText;
     public int MaxMagazineBulletCount;
     public int CurrentMagazineBulletCount;
     public int MaxAmmoSupply;
@@ -15,10 +17,17 @@ public class Weapon : MonoBehaviour
     public AudioSource ShotSound;
     public AudioSource ReloadSound;
     public LayerMask AttackableLayer;
+    private AnimationManager _AnimationManager;
+
+    public void SetAnimationManager(AnimationManager animationManager)
+    {
+        _AnimationManager = animationManager;
+    }
 
     private IEnumerator LockFire(float Time)
     {
         yield return new WaitForSeconds(Time);
+        _AnimationManager.ResetAnimatorSpeed();
         CanFire = true;
     }
 
@@ -34,6 +43,8 @@ public class Weapon : MonoBehaviour
         CanFire = true;
         IsReloading = false;
 
+        UpdateUI();
+
         Debug.Log("Reload is complete");
     }
 
@@ -43,7 +54,7 @@ public class Weapon : MonoBehaviour
         else return false;
     }
 
-    public void Reload(AnimationManager _AnimationManager)
+    public void Reload()
     {
         if (!IsReloading)
         {
@@ -52,16 +63,18 @@ public class Weapon : MonoBehaviour
             IsReloading = true;
             CanFire = false;
 
-            StartCoroutine(LockFireForReloading(TimeForReloading));
+            float reloadClipLength = _AnimationManager.GetClipLength("reload");
+            float reloadTime = reloadClipLength > 0 ? reloadClipLength : TimeForReloading;
+            StartCoroutine(LockFireForReloading(reloadTime));
         }
     }
 
-    public void Fire(AnimationManager _AnimationManager)
+    public void Fire()
     {
         if (CanFire && !IsMagazineEmpty() && !IsReloading)
         {
             ShotSound.Play();
-            _AnimationManager.SetAnimationFire();
+            _AnimationManager.SetAnimationFire(TimeBetweenShots);
 
             CurrentMagazineBulletCount--;
             Debug.Log("Bullets remaining: " + CurrentMagazineBulletCount);
@@ -80,8 +93,16 @@ public class Weapon : MonoBehaviour
                     Debug.Log("Вы попали по " + HitInfo.transform.name + " и нанесли ему " + WeaponDamage);
                 }
             }
+
+            UpdateUI();
+
             CanFire = false;
             StartCoroutine(LockFire(TimeBetweenShots));
         }
+    }
+
+    public void UpdateUI()
+    {
+        AmmoText.text = CurrentMagazineBulletCount + "/" + MaxMagazineBulletCount + " ";
     }
 }
