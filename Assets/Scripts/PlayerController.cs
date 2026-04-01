@@ -3,189 +3,164 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public bool LockCursor = true;
+    [Header("Movement")]
     public float MovementSpeed = 2.0f;
     public float SprintSpeed = 4.0f;
     public float JumpForce = 5.0f;
     public float DistanceToGround = 0.76f;
-    public float MouseSensitivity = 5.0f;
-    public float RotationSmoothing = 20f;
+
+    [Header("Mouse & Camera")]
+    public bool LockCursor = true;
+    public float MouseSensitivity = 2.0f;
+    [Range(0f, 0.1f)]
+    [Tooltip("Плавность камеры. 0 - резкая киберспортивная, 0.05 - плавная кинематографичная")]
+    public float RotationSmoothTime = 0.03f;
+
+    [Header("References")]
     public GameObject HandMeshes;
     public GameObject[] WeaponInventory;
     public GameObject[] WeaponMeshes;
+
     private int SelectedWeaponId = 0;
     private Weapon _Weapon;
+
     private float pitch, yaw;
+    private float pitchVelocity, yawVelocity;
+    private float currentPitch, currentYaw;
+
     private bool IsGrounded;
-    private bool IsSprinting = false; //булевая бежим мы сейчас или нет
+    private bool IsSprinting = false;
     private Rigidbody _Rigidbody;
     private GameManager _GameManager;
-    private AnimationManager _AnimationManager; //приватное поле которое будет хранить в себе анимайшен менеджер
+    private AnimationManager _AnimationManager;
 
     void Start()
     {
         _Rigidbody = GetComponent<Rigidbody>();
         _GameManager = FindAnyObjectByType<GameManager>();
-        _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
-        WeaponMeshes[SelectedWeaponId].SetActive(true);
 
-        _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
+        yaw = transform.eulerAngles.y;
+        currentYaw = yaw;
+        if (HandMeshes != null)
+        {
+            pitch = HandMeshes.transform.localEulerAngles.x;
+            currentPitch = pitch;
+        }
 
-        _Weapon.UpdateUI();
-        LockCursor = true;
+        SelectWeapon(0);
         UpdateCursorState();
     }
 
-    void FixedUpdate()
+    void Update() // UPDATE: считываем мышь и кнопки
     {
-        GroundCheck();
-        
-        if (Input.GetKey(KeyCode.Space) && IsGrounded) Jump();
-
-        if (Input.GetKey(KeyCode.LeftShift) && IsGrounded && !_GameManager.IsStaminaRestoring)
-        {
-            _GameManager.SpendStamina();
-            _Rigidbody.MovePosition(CalculateSprint());
-        }
-        else _Rigidbody.MovePosition(CalculateMovement());
-
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             LockCursor = !LockCursor;
             UpdateCursorState();
         }
 
-        _Weapon.SetAnimationManager(_AnimationManager);
-        if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire();
-        if (Input.GetKey(KeyCode.R)) _Weapon.Reload();
-        if (Input.GetAxis("Mouse ScrollWheel") < 0) SelectNextWeapon();
-        else if (Input.GetAxis("Mouse ScrollWheel") > 0) SelectPrevWeapon();
+        if (LockCursor)
+        {
+            // Вращение камеры и персонажа теперь происходит каждый кадр
+            HandleRotation();
+
+            if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire();
+            if (Input.GetKey(KeyCode.R)) _Weapon.Reload();
+
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll < 0) SelectNextWeapon();
+            else if (scroll > 0) SelectPrevWeapon();
+        }
+    }
+
+    void FixedUpdate() // FIXED UPDATE: только физика
+    {
+        GroundCheck();
+
+        if (Input.GetKey(KeyCode.Space) && IsGrounded) Jump();
+
+        if (Input.GetKey(KeyCode.LeftShift) && IsGrounded && !_GameManager.IsStaminaRestoring && IsMoving())
+        {
+            _GameManager.SpendStamina();
+            _Rigidbody.MovePosition(CalculateSprint());
+        }
+        else
+        {
+            _Rigidbody.MovePosition(CalculateMovement());
+        }
 
         SetAnimation();
-        SetRotation();
+    }
+
+    private void HandleRotation()
+    {
+        yaw += Input.GetAxis("Mouse X") * MouseSensitivity;
+        pitch -= Input.GetAxis("Mouse Y") * MouseSensitivity;
+
+        pitch = Mathf.Clamp(pitch, -80f, 80f);
+
+        currentYaw = Mathf.SmoothDampAngle(currentYaw, yaw, ref yawVelocity, RotationSmoothTime);
+        currentPitch = Mathf.SmoothDampAngle(currentPitch, pitch, ref pitchVelocity, RotationSmoothTime);
+
+        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+
+        if (HandMeshes != null)
+        {
+            HandMeshes.transform.localRotation = Quaternion.Euler(currentPitch, 0f, 0f);
+        }
     }
 
     private void UpdateCursorState()
     {
-        if (LockCursor)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
+        Cursor.lockState = LockCursor ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !LockCursor;
     }
 
     private Vector3 CalculateMovement()
     {
         IsSprinting = false;
-
-        float HorizontalDirection = Input.GetAxis("Horizontal");
-        float VerticalDirection = Input.GetAxis("Vertical");
-
-        Vector3 Move = transform.right * HorizontalDirection + transform.forward * VerticalDirection;
-
-        return _Rigidbody.transform.position + Move * Time.fixedDeltaTime * MovementSpeed;
+        return GetMoveVector(MovementSpeed);
     }
 
     private Vector3 CalculateSprint()
     {
         IsSprinting = true;
-
-        float HorizontalDirection = Input.GetAxis("Horizontal");
-        float VerticalDirection = Input.GetAxis("Vertical");
-
-        Vector3 Move = transform.right * HorizontalDirection + transform.forward * VerticalDirection;
-
-        return _Rigidbody.transform.position + Move * Time.fixedDeltaTime * SprintSpeed;
+        return GetMoveVector(SprintSpeed);
     }
 
-    private void Jump()
+    private Vector3 GetMoveVector(float speed)
     {
-        _Rigidbody.AddForce(Vector3.up *  JumpForce, ForceMode.Impulse);
+        float h = Input.GetAxisRaw("Horizontal");
+        float v = Input.GetAxisRaw("Vertical");
+        Vector3 move = transform.right * h + transform.forward * v;
+
+        return _Rigidbody.position + move.normalized * speed * Time.fixedDeltaTime;
     }
 
-    private void GroundCheck()
+    private void Jump() => _Rigidbody.AddForce(Vector3.up * JumpForce, ForceMode.Impulse);
+
+    private void GroundCheck() => IsGrounded = Physics.Raycast(transform.position, Vector3.down, DistanceToGround);
+
+    private void SelectWeapon(int id)
     {
-        IsGrounded = Physics.Raycast(transform.position, Vector3.down, DistanceToGround);
+        foreach (var mesh in WeaponMeshes) mesh.SetActive(false);
+
+        SelectedWeaponId = id;
+        WeaponMeshes[SelectedWeaponId].SetActive(true);
+        _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
+        _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
+        _Weapon.SetAnimationManager(_AnimationManager);
+        _Weapon.UpdateUI();
     }
 
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + (Vector3.down * DistanceToGround));
-    }
+    private void SelectPrevWeapon() { if (SelectedWeaponId > 0) SelectWeapon(SelectedWeaponId - 1); }
+    private void SelectNextWeapon() { if (SelectedWeaponId < WeaponInventory.Length - 1) SelectWeapon(SelectedWeaponId + 1); }
 
-    public void SetRotation()
-    {
-        yaw += Input.GetAxis("Mouse X") * MouseSensitivity;
-        pitch -= Input.GetAxis("Mouse Y") * MouseSensitivity;
+    private bool IsMoving() => Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0;
 
-        pitch = Mathf.Clamp(pitch, -60, 90);
-
-        Quaternion SmoothRotation = Quaternion.Euler(pitch, yaw, 0);
-
-        HandMeshes.transform.rotation = Quaternion.Slerp(HandMeshes.transform.rotation, SmoothRotation, RotationSmoothing * Time.fixedDeltaTime);
-
-        SmoothRotation = Quaternion.Euler(0, yaw, 0);
-
-        transform.rotation = Quaternion.Slerp(transform.rotation, SmoothRotation, RotationSmoothing * Time.fixedDeltaTime);
-    }
-
-    private void SelectPrevWeapon()
-    {
-        if (SelectedWeaponId != 0)
-        {
-            WeaponMeshes[SelectedWeaponId].SetActive(false);
-            SelectedWeaponId -= 1;
-
-            _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
-            WeaponMeshes[SelectedWeaponId].SetActive(true);
-
-            _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
-
-            _Weapon.UpdateUI();
-
-            Debug.Log("Weapon: " + _Weapon.WeaponType);
-        }
-    }
-
-    private void SelectNextWeapon()
-    {
-        if (WeaponInventory.Length > SelectedWeaponId + 1)
-        {
-            WeaponMeshes[SelectedWeaponId].SetActive(false);
-            SelectedWeaponId += 1;
-
-            _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
-            WeaponMeshes[SelectedWeaponId].SetActive(true);
-
-            _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
-
-            _Weapon.UpdateUI();
-
-            Debug.Log("Weapon: " + _Weapon.WeaponType);
-        }
-    }
-
-    //метод который считывает двигаемся ли в данный момент
-    private bool IsMoving()
-    {
-        //если перемещается по горизонтали или по вертикали
-        //если по какой либо из осей перемещается то возвращает тру
-        return Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
-    }
-    //метод переключения анимации
     private void SetAnimation()
     {
-        if (_AnimationManager == null)
-        {
-            Debug.LogError("AnimationManager is null! SelectedWeaponId: " + SelectedWeaponId);
-            return;
-        }
+        if (_AnimationManager == null) return;
 
         if (IsMoving())
         {
