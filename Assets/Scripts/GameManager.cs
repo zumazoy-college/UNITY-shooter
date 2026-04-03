@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public int Health;
+    public int Health = 100;
     public int MaxHealth = 100;
     private int Stamina = 100;
     public bool IsStaminaRestoring = false;
@@ -22,7 +22,6 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        Health = 50;
         HealthBar.value = Health;
         StaminaBar.value = Stamina;
     }
@@ -81,10 +80,22 @@ public class GameManager : MonoBehaviour
     public void GameOver()
     {
         GameOverScreen.gameObject.SetActive(true);
+
+        Time.timeScale = 0f;
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        if (Player != null)
+        {
+            PlayerController pc = Player.GetComponent<PlayerController>();
+            if (pc != null) pc.enabled = false;
+        }
     }
 
     public void RestartGame()
     {
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

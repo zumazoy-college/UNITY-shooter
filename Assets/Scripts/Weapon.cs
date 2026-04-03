@@ -85,12 +85,19 @@ public class Weapon : MonoBehaviour
             {
                 if (HitInfo.transform.gameObject.layer == 6)
                 {
-                    //тоес с того объекта которому мы нанесли урон мы забираем енему
-                    //контроллер обращаемя к нему и вызываем метод дамага
                     EnemyController EC = HitInfo.transform.gameObject.GetComponent<EnemyController>();
-                    EC.DealDamage(WeaponDamage);
+                    if (EC != null)
+                    {
+                        EC.DealDamage(WeaponDamage);
+                        Debug.Log("Вы попали по " + HitInfo.transform.name + " и нанесли ему " + WeaponDamage);
+                    }
 
-                    Debug.Log("Вы попали по " + HitInfo.transform.name + " и нанесли ему " + WeaponDamage);
+                    BossManager Boss = HitInfo.transform.gameObject.GetComponent<BossManager>();
+                    if (Boss != null)
+                    {
+                        Boss.TakeDamage(WeaponDamage);
+                        Debug.Log("Вы попали по БОССУ и нанесли " + WeaponDamage + " урона!");
+                    }
                 }
             }
 

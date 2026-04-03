@@ -52,7 +52,6 @@ public class EnemyController : MonoBehaviour
 
         if (DistanceToPlayer <= ViewingDistance) //условие дистанс меньше либо ранво вьювинг
         {
-            _Agent.SetDestination(_Target.position); //обращаемся
             transform.LookAt(_Target.position); //поворачиваемся в сторону игрока
             //если достанция до игрока меньше либа равна атаки дистанции и атака разрешена то вызываем корутину 
             if (DistanceToPlayer <= AttackDistance && EnableAttack) StartCoroutine(AttackCountdown());

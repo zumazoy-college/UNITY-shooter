@@ -13,7 +13,7 @@ public class PlayerController : MonoBehaviour
     public bool LockCursor = true;
     public float MouseSensitivity = 2.0f;
     [Range(0f, 0.1f)]
-    [Tooltip("Плавность камеры. 0 - резкая киберспортивная, 0.05 - плавная кинематографичная")]
+    [Tooltip("Плавность камеры")]
     public float RotationSmoothTime = 0.03f;
 
     [Header("References")]
@@ -47,11 +47,15 @@ public class PlayerController : MonoBehaviour
             currentPitch = pitch;
         }
 
-        SelectWeapon(0);
+        if (WeaponInventory != null && WeaponInventory.Length > 0)
+        {
+            SelectWeapon(0);
+        }
+
         UpdateCursorState();
     }
 
-    void Update() // UPDATE: считываем мышь и кнопки
+    void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -61,27 +65,35 @@ public class PlayerController : MonoBehaviour
 
         if (LockCursor)
         {
-            // Вращение камеры и персонажа теперь происходит каждый кадр
             HandleRotation();
 
-            if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire();
-            if (Input.GetKey(KeyCode.R)) _Weapon.Reload();
+            if (_Weapon != null)
+            {
+                if (Input.GetKey(KeyCode.Mouse0)) _Weapon.Fire();
+                if (Input.GetKey(KeyCode.R)) _Weapon.Reload();
+            }
 
-            float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (scroll < 0) SelectNextWeapon();
-            else if (scroll > 0) SelectPrevWeapon();
+            if (WeaponInventory != null && WeaponInventory.Length > 0)
+            {
+                float scroll = Input.GetAxis("Mouse ScrollWheel");
+                if (scroll < 0) SelectNextWeapon();
+                else if (scroll > 0) SelectPrevWeapon();
+            }
         }
     }
 
-    void FixedUpdate() // FIXED UPDATE: только физика
+    void FixedUpdate()
     {
         GroundCheck();
 
         if (Input.GetKey(KeyCode.Space) && IsGrounded) Jump();
 
-        if (Input.GetKey(KeyCode.LeftShift) && IsGrounded && !_GameManager.IsStaminaRestoring && IsMoving())
+        bool canSprint = IsGrounded && IsMoving();
+        if (_GameManager != null) canSprint = canSprint && !_GameManager.IsStaminaRestoring;
+
+        if (Input.GetKey(KeyCode.LeftShift) && canSprint)
         {
-            _GameManager.SpendStamina();
+            if (_GameManager != null) _GameManager.SpendStamina();
             _Rigidbody.MovePosition(CalculateSprint());
         }
         else
@@ -104,10 +116,7 @@ public class PlayerController : MonoBehaviour
 
         transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
 
-        if (HandMeshes != null)
-        {
-            HandMeshes.transform.localRotation = Quaternion.Euler(currentPitch, 0f, 0f);
-        }
+        if (HandMeshes != null) HandMeshes.transform.localRotation = Quaternion.Euler(currentPitch, 0f, 0f);
     }
 
     private void UpdateCursorState()
@@ -149,8 +158,12 @@ public class PlayerController : MonoBehaviour
         WeaponMeshes[SelectedWeaponId].SetActive(true);
         _Weapon = WeaponInventory[SelectedWeaponId].GetComponent<Weapon>();
         _AnimationManager = WeaponMeshes[SelectedWeaponId].GetComponent<AnimationManager>();
-        _Weapon.SetAnimationManager(_AnimationManager);
-        _Weapon.UpdateUI();
+
+        if (_Weapon != null)
+        {
+            _Weapon.SetAnimationManager(_AnimationManager);
+            _Weapon.UpdateUI();
+        }
     }
 
     private void SelectPrevWeapon() { if (SelectedWeaponId > 0) SelectWeapon(SelectedWeaponId - 1); }

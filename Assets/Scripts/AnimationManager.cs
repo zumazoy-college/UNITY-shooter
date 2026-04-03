@@ -63,4 +63,9 @@ public class AnimationManager : MonoBehaviour
     {
         _Animator.SetTrigger("Reload");
     }
+
+    public void SetBossDie()
+    {
+        _Animator.SetTrigger("Die");
+    }
 }
